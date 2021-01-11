@@ -26,7 +26,7 @@ class Agent:
         self.R = np.zeros((buffer_size, 1), dtype = 'float')
         self.S_= np.zeros((buffer_size, state_dim), dtype = 'float')
         self.D = np.zeros((buffer_size, 1), dtype = 'bool')
-        self.mntr = 0                                                
+        self.mntr = 0                                 
         
     def get_action(self, state):
         state = torch.Tensor(state).cuda()
