@@ -8,16 +8,18 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 
 ##### params for Environment ###
-end = datetime.today()
-start = end + timedelta(weeks = -3)
 
-n_episode = 200
+n_episode = 100
+test_period = 7
 seed = 10
 sequence_length = 7
 fee = 0.0015 
 amp = 10
-clip = int(np.log10(amp))
 maginot_line = -100
+clip = int(np.log10(amp))
+end = datetime.today()
+start = end + timedelta(days = -(test_period + 18))
+
 ### params for Agent
 path = './model/KOSPI_'
 render = False
@@ -54,16 +56,15 @@ def main_test():
             order, log_prob = agent.get_action(state)
             order = np.round(order, clip)
             state_, reward, done, origin_ratio, pr = env.step(order, render)
-            
             state = state_
         #Epi done
-        origin_ratio_list.append(profit_ratio)
+        origin_ratio_list.append(origin_ratio)
         stock_name_list.append(env.name)
     #all epi done
     Average_profit = np.mean(origin_ratio_list[-100:])
-    count = list(filter(lambda x: x > 0, profit_ratio_list))
+    count = list(filter(lambda x: x > 0, origin_ratio_list))
     ratio = len(count) / len(origin_ratio_list)
-    print('[평균 일일 수익률: {:.1f}, 이득 일수 비율: {:.1f}%]'.format(Average_profit, ratio * 100))
+    print('Test is Done.... [평균 일일 수익률: {:.1f}, 이득 일수 비율: {:.1f}%]'.format(Average_profit, ratio * 100))
     plt.scatter(stock_name_list, origin_ratio_list)
     #plt.scatter(range(n_episode), profit_ratio_list)
     plt.xticks(rotation = 90)
@@ -101,4 +102,5 @@ def stock_item_test():
     
 
 if __name__ == "__main__":
+    #main_test()
     stock_item_test()

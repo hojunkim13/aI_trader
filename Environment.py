@@ -110,8 +110,8 @@ class Environment:
         
         if self.time == self.data.index[-1] or profit_ratio <= self.maginot_line:
             done = True
-            print('[{}/{}] 종목: {}  코드: {} 평균가: {:.0f}원'.format(self.episode+1, self.n_episode, self.name, self.code, self.price))
-            print(f'###### [총 수익률: {profit_ratio:.3f}%] [원금: {self.principal:.0f}원] [자산 : {cash:.0f}원] ######')
+            print('[{}/{}] 종목: {}  코드: {}  평균가: {:.0f}원'.format(self.episode+1, self.n_episode, self.name, self.code, self.price))
+            print(f'###### [총 수익률: {profit_ratio:.1f}%] [원금: {self.principal:.0f}원] [자산 : {cash:.0f}원] ######')
             if render:
                 print('')
         return new_state, reward, done, profit_ratio, profit*100

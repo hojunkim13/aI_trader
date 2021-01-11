@@ -11,7 +11,8 @@ n_episode = 1000
 seed = 10
 sequence_length = 7
 fee = 0.0015
-amp = 10.
+amp = 10
+clip = int(np.log10(amp))
 maginot_line = -100
 ### params for Agent
 path = './model/KOSPI_'
@@ -49,7 +50,7 @@ if __name__ == "__main__":
         done = False
         while not done:
             order, log_prob = agent.get_action(state)
-            order = np.round(order, 1)
+            order = np.round(order, clip)
             
             state_, reward, done, profit_ratio,pr = env.step(order, render)
             agent.store((state, order, log_prob, reward, state_, done))
