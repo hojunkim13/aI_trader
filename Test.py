@@ -9,13 +9,14 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 ##### params for Environment ###
 end = datetime.today()
-start = end + timedelta(days = -30)
+start = end + timedelta(weeks = -3)
 
 n_episode = 200
 seed = 10
 sequence_length = 7
 fee = 0.0015 
 amp = 10
+clip = int(np.log10(amp))
 maginot_line = -100
 ### params for Agent
 path = './model/KOSPI_'
@@ -51,7 +52,7 @@ def main_test():
         done = False
         while not done:
             order, log_prob = agent.get_action(state)
-            order = np.round(order, 2)
+            order = np.round(order, clip)
             state_, reward, done, origin_ratio, pr = env.step(order, render)
             
             state = state_
@@ -76,7 +77,7 @@ def stock_item_test():
     done = False
     while not done:
         order, log_prob = agent.get_action(state)
-        order = np.round(order, 1)
+        order = np.round(order, clip)
         state_, reward, done, _,pr = env.step(order, True)
         
         time_list.append(str(env.time)[2:10])
@@ -84,11 +85,13 @@ def stock_item_test():
         pr_list.append(pr)
     #all epi done
     Average_profit = np.mean(pr_list)
-    count = list(filter(lambda x: x > 0, pr_list))
+    count = list(filter(lambda x: x < 0, pr_list))
     ratio = len(count) / len(pr_list)
-    print('[평균 일일 수익률: {:.1f}, 이득 일수 비율: {:.1f}%]'.format(Average_profit, ratio * 100))
+    print('[평균 일일 수익률: {:.1f}, 손해 일수 비율: {:.1f}%]'.format(Average_profit, ratio * 100))
+    
     order, _ = agent.get_action(state)
-    print('[예측 : {:.2f}]'.format(order))
+    order = np.round(order, clip)
+    print('[매매 : {:.2f}]'.format(order))
     plt.scatter(time_list, pr_list)
     #plt.scatter(range(n_episode), profit_ratio_list)
     plt.xticks(rotation = 90)

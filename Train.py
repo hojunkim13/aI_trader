@@ -12,7 +12,7 @@ seed = 10
 sequence_length = 7
 fee = 0.0015
 amp = 10.
-maginot_line = -30
+maginot_line = -100
 ### params for Agent
 path = './model/KOSPI_'
 load = False
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         done = False
         while not done:
             order, log_prob = agent.get_action(state)
-            order = np.round(order, 2)
+            order = np.round(order, 1)
             
             state_, reward, done, profit_ratio,pr = env.step(order, render)
             agent.store((state, order, log_prob, reward, state_, done))
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     #all epi done
     Average_profit = np.mean(profit_ratio_list[-100:])
     count = len(list(filter(lambda x: x > 0, profit_ratio_list)))
-    print('[평균 수익률: {:.1f}%, 손익률: {:.0f}%]'.format(Average_profit, count/n_episode * 100))
+    print('[평균 원금 수익률: {:.1f}%, 손익률: {:.0f}%]'.format(Average_profit, count/n_episode * 100))
     plt.scatter(stock_name_list, profit_ratio_list)
     #plt.scatter(range(n_episode), profit_ratio_list)
     plt.xticks(rotation = 90)

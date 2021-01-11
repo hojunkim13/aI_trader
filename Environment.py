@@ -7,15 +7,16 @@ from datetime import datetime
 
 class Environment:
     def __init__(self,n_episode, seed, sequence_length, fee, amp, maginot_line,
-                 start = datetime(2014,1,1), end = datetime(2019,12,31)):
+                 start = datetime(2015,1,1), end = datetime(2020,1,1)):
         self.start = start
         self.end = end
         self.seed = seed
-        self.sequence_length = 7
+        self.sequence_length = sequence_length
         self.fee = fee
         self.amp = amp
         self.n_episode = n_episode
         self.maginot_line = maginot_line
+        self.threshold = 0.0
     
         
     def _get_code_df(self):
@@ -27,8 +28,8 @@ class Environment:
         idx = np.random.choice(range(200))
         (code, name) = self.pool.loc[idx]
 
-        start = datetime(2014,1,1)
-        end = datetime(2019,12,31)
+        start = datetime(2015,1,1)
+        end = datetime.today()
         self.total_data = pdr.get_data_yahoo(code, start, end).drop(columns = 'Adj Close')
         self.max_price = self.total_data['Close'].max()
         self.min_price = self.total_data['Close'].min()
@@ -60,69 +61,60 @@ class Environment:
     def reset(self, episode):
         self.pool = self._get_code_df()
         self.data, self.name, self.code = self.get_data()
-        self.stock_profit = [0]
-        self.stocks = 0
         self.account = self.seed
         self.idx = self.sequence_length
         self.time = self.data.index[self.idx]
         self.episode = episode
-        self.total_cash = self.seed
         state = np.array(self.data.iloc[self.idx-self.sequence_length:self.idx]).reshape(-1)
     
         return state
 
     def step(self, order, render = False):
-        done = False
-        reward = 0
         buy_price = self.data['Open'][self.idx]
         price = self.data['Close'][self.idx]
-        old_price = self.data['Close'][self.idx-1]
-        old_account = self.account
+
+        done = False
+        reward = 0
         order = order * self.amp
+        if buy_price !=0:
+            order = np.clip(order, 0, self.account / buy_price)
         
-        #구매            
-        if order > 0 and self.account >= buy_price * order:
-            if buy_price !=0:
-                order = np.clip(order, 0, self.account / buy_price)
-            self.account -= buy_price * order * (1+ self.fee)
-            self.stocks += order
-        #판매
-        elif order < 0 and self.stocks >= order:    
-            order = np.clip(abs(order), 0, self.stocks)
-            self.account += price * order * (1- self.fee)
-            self.stocks -= order
-            order *= -1
-        
+        #계산
+        if order > self.threshold * self.amp:
+            buy = buy_price * order * (1 + self.fee)
+            sell = price * order * (1 - self.fee)
+            income = sell - buy
+            account = self.account + income
+        else:
+            account = self.account
+            income = 0
         self.idx += 1
         self.time = self.data.index[self.idx]
         new_state = np.array(self.data.iloc[self.idx-self.sequence_length:self.idx]).reshape(-1)
         
         
-        #현재 잔액 계산
         #오늘 평가손익 >> 어제 평가손익 이면, 보상
         #reward calc
-        total_cash = (self.account + self.stocks * price * (1-self.fee))
-        stock_profit = (total_cash - self.total_cash) / self.total_cash
-        self.stock_profit.append(stock_profit)
-        reward += stock_profit / 10
-        self.total_cash = total_cash
+        profit = (account - self.account) / self.account
+        reward += profit
+        self.account = account
         
         #원금비율확인
-        profit_ratio = (self.total_cash - self.seed) / self.seed * 100
-        cash = self.unnormal(self.total_cash)
-        stock_ratio = self.stocks * price * (1-self.fee) / self.total_cash * 100
-        stock_profit_ratio = self.stock_profit[-1] * 100
+        profit_ratio = (self.account - self.seed) / self.seed * 100
+        cash = self.unnormal(self.account)
+        income_cash = cash * profit
+        
         if render:
             time = '[날짜: ' + str(self.time)[:10] + ']'
-            print(time, f' [자산: {cash:.0f}원 / 주식 비율: {stock_ratio:.1f}%] [주문(old): {order:.2f}] [일일 수익률: {stock_profit_ratio:.1f}%]')
+            print(time, f' [자산: {cash:.0f}원] [주문(today): {order:.2f}] [일일 수익률: {(profit*100):.1f}%] [수익: {income_cash:.0f} 원]')
         
-        if self.time == self.data.index[-1] or profit_ratio < self.maginot_line:
+        if self.time == self.data.index[-1] or profit_ratio <= self.maginot_line:
             done = True
             print('[{}/{}] 종목: {}  코드: {} 평균가: {:.0f}원'.format(self.episode+1, self.n_episode, self.name, self.code, self.price))
             print(f'###### [총 수익률: {profit_ratio:.3f}%] [원금: {self.principal:.0f}원] [자산 : {cash:.0f}원] ######')
-            print('')
-
-        return new_state, reward, done, profit_ratio, stock_profit_ratio
+            if render:
+                print('')
+        return new_state, reward, done, profit_ratio, profit*100
 
 
 
