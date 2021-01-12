@@ -15,7 +15,7 @@ seed = 10
 sequence_length = 7
 fee = 0.0015 
 amp = 10
-maginot_line = -100
+maginot_line = -10
 clip = int(np.log10(amp))
 end = datetime.today()
 start = end + timedelta(days = -(test_period + 18))
@@ -27,8 +27,8 @@ state_dim = sequence_length * 5
 ### parms for Network
 lr = 1e-4
 epsilon = 0.2
-gamma = 0.99
-lmbda = 0.95
+gamma = 0.80
+lmbda = 0.80
 buffer_size = 1000
 batch_size = 512
 k_epochs = 10
@@ -79,6 +79,7 @@ def stock_item_test():
     while not done:
         order, log_prob = agent.get_action(state)
         order = np.round(order, clip)
+        print(order)
         state_, reward, done, _,pr = env.step(order, True)
         
         time_list.append(str(env.time)[2:10])
@@ -98,7 +99,7 @@ def stock_item_test():
     plt.xticks(rotation = 90)
     plt.ylabel('Profit Ratio [%]')
     plt.title(env.name)
-    #plt.show()
+    plt.show()
     
 
 if __name__ == "__main__":

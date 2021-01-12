@@ -37,7 +37,6 @@ class Environment:
         self.price = (self.max_price + self.min_price) / 2.
 
         target_period_data = pdr.get_data_yahoo(code, self.start, self.end).drop(columns = 'Adj Close')
-        target_period_data = self.normalize(target_period_data)
         return target_period_data, name, code
 
     def normalize(self, df):
@@ -53,72 +52,71 @@ class Environment:
             assert g_min <= l_min, 'normalize error occured.'
             df[col] = (df[col] - g_min) / (g_max - g_min)
         self.unnormal = lambda x : x * (self.max_price - self.min_price) + self.min_price
-        self.principal = self.unnormal(self.seed)
         return df
 
     #############################
     ##      For Env func       ##
     #############################
     def reset(self, episode):
-        self.data, self.name, self.code = self.get_data()
-        self.account = self.seed
+        data, self.name, self.code = self.get_data()
+        self.data = self.normalize(data)
+        self.account = self.unnormal(self.seed)
         self.idx = self.sequence_length
         self.time = self.data.index[self.idx]
         self.episode = episode
+        self.principal = self.account
         state = np.array(self.data.iloc[self.idx-self.sequence_length:self.idx]).reshape(-1)
-    
         return state
 
     def step(self, order, render = False):
-        buy_price = self.data['Open'][self.idx]
-        price = self.data['Close'][self.idx]
+        buy_price = self.unnormal(self.data['Open'][self.idx])
+        price = self.unnormal(self.data['Close'][self.idx])
 
         done = False
         reward = 0
         order = order * self.amp
-        if buy_price !=0:
-            order = np.clip(order, 0, self.account / buy_price)
+        limit = self.account // buy_price
+        order = np.clip(order, -limit, limit)
         
         #계산
-        if order > self.threshold * self.amp:
-            buy = buy_price * order * (1 + self.fee)
-            sell = price * order * (1 - self.fee)
-            income = sell - buy
-            account = self.account + income
-        else:
-            account = self.account
-            income = 0
+        #in case of order < 0, (pred means sell & price will go down)
+        #if price difference is plus, our income will be minus,
+        #if price difference is minus, our income will be plus.
+        buy = buy_price * (1 + self.fee)
+        sell = price  * (1 - self.fee)
+        income = (sell - buy) * order
+        #reward calc
+        profit = income / self.account
+        reward += profit
+        reward = np.clip(reward, -2.0, 2.0)
+
+        if order > 0:
+            #our model make purchase only in stock-price-up cases.
+            self.account += income
+    
+            
         self.idx += 1
         self.time = self.data.index[self.idx]
         new_state = np.array(self.data.iloc[self.idx-self.sequence_length:self.idx]).reshape(-1)
         
         
-        #오늘 평가손익 >> 어제 평가손익 이면, 보상
-        #reward calc
-        profit = (account - self.account) / self.account
-        reward += profit
-        self.account = account
-        
+
         #원금비율확인
-        profit_ratio = (self.account - self.seed) / self.seed * 100
-        cash = self.unnormal(self.account)
-        income_cash = cash * profit
+        #Check principal ratio
+        principal_ratio = (self.account - self.principal) / self.principal * 100
         
         if render:
             time = '[날짜: ' + str(self.time)[:10] + ']'
-            print(time, f' [자산: {cash:.0f}원] [주문(today): {order:.2f}] [일일 수익률: {(profit*100):.1f}%] [수익: {income_cash:.0f} 원]')
+            print(time, f' [자산: {self.account:.0f}원] [주문(today): {order:.2f}] [일일 수익률: {(profit*100):.1f}%] [수익: {income:.0f} 원]')
         
-        if self.time == self.data.index[-1] or profit_ratio <= self.maginot_line:
+        if self.time == self.data.index[-1] or principal_ratio <= self.maginot_line:
             done = True
             print('[{}/{}] 종목: {}  코드: {}  평균가: {:.0f}원'.format(self.episode+1, self.n_episode, self.name, self.code, self.price))
-            print(f'###### [총 수익률: {profit_ratio:.1f}%] [원금: {self.principal:.0f}원] [자산 : {cash:.0f}원] ######')
+            print(f'###### [총 수익률: {principal_ratio:.1f}%] [원금: {self.principal:.0f}원] [자산 : {self.account:.0f}원] ######')
             if render:
                 print('')
-        return new_state, reward, done, profit_ratio, profit*100
+        return new_state, reward, done, principal_ratio, profit*100
 
-if __name__ == '__main__':
-    env = Environment(10,10,7,0.015,10,-100,)
-    state = env.reset()
     
 
 

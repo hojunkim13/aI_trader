@@ -7,26 +7,26 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 
 ##### params for Environment ###
-n_episode = 1000
+n_episode = 150
 seed = 10
 sequence_length = 7
 fee = 0.0015
 amp = 10
 clip = int(np.log10(amp))
-maginot_line = -100
+maginot_line = -10
 ### params for Agent
 path = './model/KOSPI_'
-load = False
+load = True
 render = False
 save_cycle = 10
 state_dim = sequence_length * 5
 ### parms for Networkd
-lr = 1e-4
+lr = 1e-5
 epsilon = 0.2
-gamma = 0.99
-lmbda = 0.95
+gamma = 0.80
+lmbda = 0.80
 buffer_size = 1000
-batch_size = 256
+batch_size = 512
 k_epochs = 10
 
 
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     #all epi done
     Average_profit = np.mean(profit_ratio_list[-100:])
     count = len(list(filter(lambda x: x > 0, profit_ratio_list)))
-    print('[평균 원금 수익률: {:.1f}%, 손익률: {:.0f}%]'.format(Average_profit, count/n_episode * 100))
+    print('[평균 수익률: {:.1f}%, 이익 종목 비율: {:.0f}%]'.format(Average_profit, count/n_episode * 100))
     plt.scatter(stock_name_list, profit_ratio_list)
     #plt.scatter(range(n_episode), profit_ratio_list)
     plt.xticks(rotation = 90)
