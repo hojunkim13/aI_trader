@@ -30,7 +30,7 @@ class Network(nn.Module):
 
     def forward(self, state):
         x = self.fc1(state)
-        mu = (self.mu(x)+1.)/2.
+        mu = self.mu(x)
         std = self.std(x)
         value = self.value(x)
         return (mu, std), value

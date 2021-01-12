@@ -18,17 +18,18 @@ class Environment:
         self.n_episode = n_episode
         self.maginot_line = maginot_line
         self.threshold = 0.0
-    
+        self.choice_stock = np.random.choice(range(200))
         
     def _get_code_df(self):
         df = pd.read_csv('./data/KOSPI.csv').drop(columns='NO')
         df['종목코드'] = df['종목코드'].apply(lambda x : x[3:9] + '.KS')
         return df
         
-    def get_data(self):
-        choice_stock = np.random.choice(range(200))
-        (code, name) = self.pool.loc[choice_stock]
-
+    def get_data(self, name = None, code = None):
+        if name == None:
+            choice_stock = self.choice_stock % 200
+            self.choice_stock += 1
+            (code, name) = self.pool.loc[choice_stock]
         start = datetime(2015,1,1)
         end = datetime.today()
         self.total_data = pdr.get_data_yahoo(code, start, end).drop(columns = 'Adj Close')
@@ -57,8 +58,8 @@ class Environment:
     #############################
     ##      For Env func       ##
     #############################
-    def reset(self, episode):
-        data, self.name, self.code = self.get_data()
+    def reset(self, episode, name = None, code = None):
+        data, self.name, self.code = self.get_data(name, code)
         self.data = self.normalize(data)
         self.account = self.unnormal(self.seed)
         self.idx = self.sequence_length
@@ -113,9 +114,7 @@ class Environment:
             done = True
             print('[{}/{}] 종목: {}  코드: {}  평균가: {:.0f}원'.format(self.episode+1, self.n_episode, self.name, self.code, self.price))
             print(f'###### [총 수익률: {principal_ratio:.1f}%] [원금: {self.principal:.0f}원] [자산 : {self.account:.0f}원] ######')
-            if render:
-                print('')
-        return new_state, reward, done, principal_ratio, profit*100
+        return new_state, reward/10, done, principal_ratio, profit*100
 
     
 

@@ -4,12 +4,13 @@ import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 from datetime import datetime, timedelta
+import pandas as pd
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 
 ##### params for Environment ###
 
-n_episode = 100
+n_episode = 200
 test_period = 7
 seed = 10
 sequence_length = 7
@@ -34,18 +35,17 @@ batch_size = 512
 k_epochs = 10
 
 
-
-env = Environment(n_episode,seed = seed, sequence_length = sequence_length, fee= fee,
-                        amp = amp, maginot_line = maginot_line,
-                        start = start,
-                        end = end)
-
 agent = Agent(state_dim, lr = lr, epsilon = epsilon, gamma = gamma,
               lmbda = lmbda, buffer_size = buffer_size,
               batch_size= batch_size, k_epochs= k_epochs)
 agent.load(path)
 
 def main_test():
+    env = Environment(n_episode,seed = seed, sequence_length = sequence_length, fee= fee,
+                        amp = amp, maginot_line = maginot_line,
+                        start = start,
+                        end = end)
+
     origin_ratio_list = []
     stock_name_list = []
     
@@ -72,6 +72,11 @@ def main_test():
     plt.show()
 
 def stock_item_test():
+    env = Environment(1, seed = seed, sequence_length = sequence_length, fee= fee,
+                        amp = amp, maginot_line = maginot_line,
+                        start = start,
+                        end = end)
+
     pr_list = []
     time_list = []
     state = env.reset(0)
@@ -101,7 +106,44 @@ def stock_item_test():
     plt.title(env.name)
     plt.show()
     
+def find_items():
+    tested_items = pd.DataFrame(columns = ['Name', 'Code', 'Average Profit[%]',
+                                           'Profit Day Ratio[%]', 'Tomorrow Prediction'])
+    train_items = pd.read_csv('./data/train_item.csv')
+    num_items = len(train_items)
+    env = Environment(num_items,seed = seed, sequence_length = sequence_length, fee= fee,
+                        amp = amp, maginot_line = maginot_line,
+                        start = start,
+                        end = end)
+    total_profit_list = []
+    for index, (name, code) in train_items.iterrows():
+        pr_list = []
+        state = env.reset(index, name, code)
+        done = False
+        while not done:
+            order, log_prob = agent.get_action(state)
+            order = np.round(order, clip)
+            state_, reward, done, total_profit, pr = env.step(order, True)
+            state = state_
+            pr_list.append(pr)
+        #one items done.
+        Average_profit = np.round(np.mean(pr_list), 1)
+        total_profit_list.append(total_profit)
+        count = list(filter(lambda x: x < 0, pr_list))
+        ratio = len(count) / len(pr_list)
+        ratio = np.round(ratio, 3)
+        print('[평균 일일 수익률: {:.1f}, 손해 일수 비율: {:.1f}%]'.format(Average_profit, ratio * 100))        
+        print('')
+        order, _ = agent.get_action(state)
+        order = np.round(order, clip) * amp
+        #print('[매매 : {:.2f}]'.format(order))
+        tested_items.loc[index] = [name, code, Average_profit, ratio * 100, order]
+    #all ep done.
+    tested_items.to_csv('./data/tested_item.csv', sep=',', encoding = 'utf-8-sig', index = False)
+    print('평균 수익률: {:.1f}'.format(np.mean(total_profit_list)))
+
 
 if __name__ == "__main__":
     #main_test()
-    stock_item_test()
+    #stock_item_test()
+    find_items()

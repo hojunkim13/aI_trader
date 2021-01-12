@@ -3,24 +3,27 @@ from Environment import Environment
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
+import pandas as pd
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 
 ##### params for Environment ###
-n_episode = 150
+n_episode = 200
 seed = 10
 sequence_length = 7
 fee = 0.0015
 amp = 10
 clip = int(np.log10(amp))
-maginot_line = -10
+maginot_line = -50
+standard = 0.
+filter_item = True
 ### params for Agent
 path = './model/KOSPI_'
-load = True
+load = False
 render = False
 save_cycle = 10
 state_dim = sequence_length * 5
-### parms for Networkd
+### parms for Network
 lr = 1e-5
 epsilon = 0.2
 gamma = 0.80
@@ -45,23 +48,35 @@ if __name__ == "__main__":
     profit_ratio_list = []
     stock_name_list = []
     
+    code_list = []
+    name_list = []
     for e in range(n_episode):
+        pr_list = []
         state = env.reset(e)
         done = False
         while not done:
             order, log_prob = agent.get_action(state)
             order = np.round(order, clip)
-            
             state_, reward, done, profit_ratio,pr = env.step(order, render)
+            pr_list.append(pr)
             agent.store((state, order, log_prob, reward, state_, done))
             agent.learn()
             state = state_
         #Epi done
         profit_ratio_list.append(profit_ratio)
         stock_name_list.append(env.name)
+        if np.mean(pr_list[-100:]) > standard:
+            name_list.append(env.name)
+            code_list.append(env.code)
         if (e+1) % save_cycle ==0:
             agent.save(path)
     #all epi done
+    n = pd.DataFrame(name_list, columns = ['Name'])
+    c = pd.DataFrame(code_list, columns = ['Code'])
+    value_items = pd.concat([n, c], axis = 1)
+    if filter_item:
+        value_items.to_csv('./data/train_item.csv', sep=',', encoding = 'utf-8-sig', index = False)
+    
     Average_profit = np.mean(profit_ratio_list[-100:])
     count = len(list(filter(lambda x: x > 0, profit_ratio_list)))
     print('[평균 수익률: {:.1f}%, 이익 종목 비율: {:.0f}%]'.format(Average_profit, count/n_episode * 100))
@@ -70,3 +85,4 @@ if __name__ == "__main__":
     plt.xticks(rotation = 90)
     plt.ylabel('Profit Ratio')
     plt.show()
+    
