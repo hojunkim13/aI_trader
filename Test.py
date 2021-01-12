@@ -19,7 +19,7 @@ amp = 10
 maginot_line = -10
 clip = int(np.log10(amp))
 end = datetime.today()
-start = end + timedelta(days = -(test_period + 18))
+start = end + timedelta(days = -(test_period + 7))
 
 ### params for Agent
 path = './model/KOSPI_'
@@ -137,7 +137,8 @@ def find_items():
         order, _ = agent.get_action(state)
         order = np.round(order, clip) * amp
         #print('[매매 : {:.2f}]'.format(order))
-        tested_items.loc[index] = [name, code, Average_profit, ratio * 100, order]
+        if Average_profit > 0.:
+            tested_items.loc[index] = [name, code, Average_profit, ratio * 100, order]
     #all ep done.
     tested_items.to_csv('./data/tested_item.csv', sep=',', encoding = 'utf-8-sig', index = False)
     print('평균 수익률: {:.1f}'.format(np.mean(total_profit_list)))
