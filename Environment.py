@@ -8,6 +8,7 @@ from datetime import datetime
 class Environment:
     def __init__(self,n_episode, seed, sequence_length, fee, amp, maginot_line,
                  start = datetime(2015,1,1), end = datetime(2020,1,1)):
+        self.pool = self._get_code_df()
         self.start = start
         self.end = end
         self.seed = seed
@@ -25,8 +26,8 @@ class Environment:
         return df
         
     def get_data(self):
-        idx = np.random.choice(range(200))
-        (code, name) = self.pool.loc[idx]
+        choice_stock = np.random.choice(range(200))
+        (code, name) = self.pool.loc[choice_stock]
 
         start = datetime(2015,1,1)
         end = datetime.today()
@@ -59,7 +60,6 @@ class Environment:
     ##      For Env func       ##
     #############################
     def reset(self, episode):
-        self.pool = self._get_code_df()
         self.data, self.name, self.code = self.get_data()
         self.account = self.seed
         self.idx = self.sequence_length
@@ -116,6 +116,10 @@ class Environment:
                 print('')
         return new_state, reward, done, profit_ratio, profit*100
 
+if __name__ == '__main__':
+    env = Environment(10,10,7,0.015,10,-100,)
+    state = env.reset()
+    
 
 
         
