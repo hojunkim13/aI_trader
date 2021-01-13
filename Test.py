@@ -11,15 +11,11 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 ##### params for Environment ###
 
 n_episode = 200
-test_period = 7
-seed = 10
 sequence_length = 7
-fee = 0.0015 
 amp = 10
-maginot_line = -10
 clip = int(np.log10(amp))
 end = datetime.today()
-start = end
+start = datetime(2020,12,1)
 
 ### params for Agent
 path = './model/KOSPI_'
@@ -41,14 +37,13 @@ agent = Agent(state_dim, lr = lr, epsilon = epsilon, gamma = gamma,
 agent.load(path)
 
 
-
+#same with train
 def main_test():
-    env = Environment(n_episode,seed = seed, sequence_length = sequence_length, fee= fee,
-                        amp = amp, maginot_line = maginot_line,
-                        start = start,
-                        end = end)
+    env = Environment(n_episode = n_episode,
+                      sequence_length = sequence_length,
+                      amp = amp,
+                      )
 
-    origin_ratio_list = []
     stock_name_list = []
     
     for e in range(n_episode):
@@ -57,68 +52,59 @@ def main_test():
         while not done:
             order, log_prob = agent.get_action(state)
             order = np.round(order, clip)
-            state_, reward, done, origin_ratio, pr = env.step(order, render)
+            state_, reward, done, profit_list = env.step(order, render)
             state = state_
         #Epi done
-        origin_ratio_list.append(origin_ratio)
         stock_name_list.append(env.name)
+        score_list.append(np.mean(profit_list))
     #all epi done
-    Average_profit = np.mean(origin_ratio_list[-100:])
-    count = list(filter(lambda x: x > 0, origin_ratio_list))
+    count = list(filter(lambda x: x > 0, score_list))
     ratio = len(count) / len(origin_ratio_list)
-    print('Test is Done.... [평균 일일 수익률: {:.1f}, 이득 일수 비율: {:.1f}%]'.format(Average_profit, ratio * 100))
-    plt.scatter(stock_name_list, origin_ratio_list)
+    print('Main Test## [평균 일일 수익률: {:.1f}, 이익 종목 비율: {:.1f}%]'.format(Average_profit, ratio * 100))
+    plt.scatter(stock_name_list, score_list)
     plt.xticks(rotation = 90)
     plt.ylabel('Profit Ratio [%]')
     plt.show()
 
-def stock_item_test():
-    tested_items = pd.DataFrame(columns = ['Name', 'Code', 'Average Profit[%]',
-                                           'Loss Day Ratio[%]', 'Tomorrow Prediction'])
-    train_items = pd.read_csv('./data/train_item_.csv')
-    num_items = len(train_items)
-    env = Environment(num_items,seed = seed, sequence_length = sequence_length, fee= fee,
-                        amp = amp, maginot_line = maginot_line,
-                        start = start,
-                        end = end)
-    pr_list = []
+#test in one item
+def stock_item_test(name = None, code = None):
+    env = Environment(n_episode = 1,
+                      sequence_length = sequence_length,
+                      amp = amp,
+                      start = start,
+                      end = end
+                      )
+
+    state = env.reset(0, name, code)
+    done = False
     time_list = []
-    for index, (name, code) in train_items.iterrows():
-        stock_name_list.append(name)
-        pr_list = []
-        state = env.reset(index, name, code)
-        done = False
-        while not done:
-            order, log_prob = agent.get_action(state)
-            order = np.round(order, clip)
-            print(order)
-            state_, reward, done, _,pr = env.step(order, True)
-            time_list.append(str(env.time)[2:10])
-            state = state_
-            pr_list.append(pr)
+    while not done:
+        order, log_prob = agent.get_action(state)
+        order = np.round(order, clip)
+        state_, reward, done, profit_list = env.step(order, True)
+        time_list.append(str(env.time)[2:10])
+        state = state_
     #epi done
-        Average_profit = np.mean(pr_list)
-        count = list(filter(lambda x: x < 0, pr_list))
-        ratio = len(count) / len(pr_list)
-        print('[평균 일일 수익률: {:.1f}, 손해 일수 비율: {:.1f}%]'.format(Average_profit, ratio * 100))
-    
-        print('[매매 : {:.2f}]'.format(order))
-        plt.scatter(time_list, pr_list)
-        #plt.scatter(range(n_episode), profit_ratio_list)
-        plt.xticks(rotation = 90)
-        plt.ylabel('Profit Ratio [%]')
-        plt.title(env.name)
-        plt.show()
-    
+    count = list(filter(lambda x: x < 0, profit_list))
+    ratio = len(count) / len(profit_list)
+    print('[손해 일수 비율: {:.1f}%]'.format(ratio * 100))
+    plt.scatter(time_list, profit_list)
+    plt.xticks(rotation = 90)
+    plt.ylabel('Profit Ratio [%]')
+    plt.title(env.name)
+    plt.show()
+
+
+#find items that fit good with model
 def find_items():
     tested_items = pd.DataFrame(columns = ['Name', 'Code', 'Average Profit[%]',
                                            'Loss Day Ratio[%]', 'Tomorrow Prediction'])
     train_items = pd.read_csv('./data/train_item_.csv')
     num_items = len(train_items)
-    env = Environment(num_items,seed = seed, sequence_length = sequence_length, fee= fee,
-                        amp = amp, maginot_line = maginot_line,
-                        start = start,
-                        end = end)
+    env = Environment(n_episode = num_items,
+                  sequence_length = sequence_length,
+                  amp = amp,
+                  )
     total_profit_list = []
     stock_name_list = []
     for index, (name, code) in train_items.iterrows():
@@ -154,5 +140,5 @@ def find_items():
 
 if __name__ == "__main__":
     #main_test()
-    find_items()
-    #stock_item_test()
+    #find_items()
+    stock_item_test()
