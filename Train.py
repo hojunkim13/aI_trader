@@ -9,13 +9,9 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 ##### params for Environment ###
 n_episode = 200
-seed = 10
 sequence_length = 7
-fee = 0.0015
 amp = 10
 clip = int(np.log10(amp))
-maginot_line = -50
-standard = 0.
 filter_item = True
 ### params for Agent
 path = './model/KOSPI_'
@@ -26,16 +22,17 @@ state_dim = sequence_length * 5
 ### parms for Network
 lr = 1e-5
 epsilon = 0.2
-gamma = 0.80
-lmbda = 0.80
+gamma = 0.5
+lmbda = 0.5
 buffer_size = 1000
 batch_size = 512
 k_epochs = 10
 
 
 
-env = Environment(n_episode,seed = seed, sequence_length = sequence_length, fee= fee,
-                        amp = amp, maginot_line = maginot_line)
+env = Environment(n_episode = n_episode,
+                  sequence_length = sequence_length,
+                  amp = amp)
 
 agent = Agent(state_dim, lr = lr, epsilon = epsilon, gamma = gamma,
               lmbda = lmbda, buffer_size = buffer_size,
@@ -45,41 +42,34 @@ if __name__ == "__main__":
     if load:
         agent.load(path)
 
-    profit_ratio_list = []
     stock_name_list = []
-    
-    code_list = []
-    name_list = []
+    score_list = []
     for e in range(n_episode):
-        pr_list = []
         state = env.reset(e)
         done = False
+        loss_count = 0
+        step_count = 0
         while not done:
             order, log_prob = agent.get_action(state)
             order = np.round(order, clip)
-            state_, reward, done, profit_ratio,pr = env.step(order, render)
-            pr_list.append(pr)
+            state_, reward, done, profit_list = env.step(order, render)
             agent.store((state, order, log_prob, reward, state_, done))
             agent.learn()
             state = state_
         #Epi done
-        profit_ratio_list.append(profit_ratio)
+        score_list.append(np.mean(profit_list))
         stock_name_list.append(env.name)
-        if np.mean(pr_list[-100:]) > standard:
-            name_list.append(env.name)
-            code_list.append(env.code)
         if (e+1) % save_cycle ==0:
             agent.save(path)
     #all epi done
-    n = pd.DataFrame(name_list, columns = ['Name'])
+    ''' n = pd.DataFrame(name_list, columns = ['Name'])
     c = pd.DataFrame(code_list, columns = ['Code'])
     value_items = pd.concat([n, c], axis = 1)
     if filter_item:
-        value_items.to_csv('./data/train_item.csv', sep=',', encoding = 'utf-8-sig', index = False)
-    
-    Average_profit = np.mean(profit_ratio_list[-100:])
-    count = len(list(filter(lambda x: x > 0, profit_ratio_list)))
-    print('[평균 수익률: {:.1f}%, 이익 종목 비율: {:.0f}%]'.format(Average_profit, count/n_episode * 100))
+        value_items.to_csv('./data/train_item.csv', sep=',', encoding = 'utf-8-sig', index = False)'''
+    count = len(list(filter(lambda x: x > 0, score_list)))
+    total_average = np.mean(score_list)
+    print('[총 평균 수익률: {:.1f}%, 이익 종목 비율: {:.0f}%]'.format(total_average, count/n_episode * 100))
     plt.scatter(stock_name_list, profit_ratio_list)
     #plt.scatter(range(n_episode), profit_ratio_list)
     plt.xticks(rotation = 90)
