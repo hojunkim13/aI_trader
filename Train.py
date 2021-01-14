@@ -8,14 +8,14 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 
 ##### params for Environment ###
-n_episode = 200
+n_episode = 2000
 sequence_length = 7
 amp = 10
 clip = int(np.log10(amp))
 filter_item = True
 ### params for Agent
 path = './model/KOSPI_'
-load = False
+load = True
 render = False
 save_cycle = 10
 state_dim = sequence_length * 5

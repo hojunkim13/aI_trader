@@ -2,8 +2,7 @@ import pandas as pd
 import numpy as np
 import pandas_datareader as pdr
 from datetime import datetime, timedelta
-from wcwidth import wcswidth
-
+from Utils import SMA, EMA, MACD, RSI
 
 class Environment:
     def __init__(self,n_episode, sequence_length, amp,
@@ -27,16 +26,15 @@ class Environment:
             choice_stock = self.choice_stock % 200
             self.choice_stock += 1
             (code, name) = self.pool.loc[choice_stock]
-        start = datetime(2010,1,1) + timedelta(days= -20)
+        start = datetime(2010,1,1) + timedelta(days= -60)
         end = self.check_time(datetime.today())
         
         self.total_data = pdr.get_data_yahoo(code, start, end).drop(columns = 'Adj Close')
-        self.max_price = self.total_data['Close'].max()
-        self.min_price = self.total_data['Close'].min()
+        self.total_data = self._add_indicator(self.total_data)
 
-        period = (self.end - self.start).days + self.sequence_length + 1
-        target_period_data = pdr.get_data_yahoo(code, self.start + timedelta(days=-20), self.end).drop(columns = 'Adj Close')
-        return target_period_data[-period:], name, code
+        target_period_data = pdr.get_data_yahoo(code, self.start + timedelta(days=-60), self.end).drop(columns = 'Adj Close')
+        target_period_data = self._add_indicator(target_period_data)
+        return target_period_data, name, code
 
     def normalize(self, df):
         df = df.copy()
@@ -63,13 +61,22 @@ class Environment:
             date = datetime.today() - timedelta(days=1)
         return date
 
+    def _add_indicator(self, df):
+        df = MACD(df, period_long=26, period_short=12, period_signal=9)
+        df = RSI(df, period = 14)
+        df['SMA'] = SMA(df, period=30)
+        df['EMA'] = EMA(df, period=20)
+        return df.dropna()
+        
     #############################
     ##      For Env func       ##
     #############################
     def reset(self, episode, name = None, code = None):
         self.profit_list = []
         data, self.name, self.code = self.get_data(name, code)
-        self.data = self.normalize(data)
+        data = self.normalize(data)
+        period = (self.end - self.start).days + self.sequence_length + 1
+        self.data = data[-period:]
         self.idx = self.sequence_length
         self.time = self.data.index[self.idx]
         self.episode = episode
@@ -90,7 +97,7 @@ class Environment:
         d_price = (sell - buy)
         #reward calc
         income = d_price * order
-
+        income_ = d_price * np.clip(order, 0, None)
         profit = d_price / buy * np.sign(order)
 
         self.profit_list.append(profit*100)
@@ -105,11 +112,11 @@ class Environment:
         if render:
             sign = f'{np.sign(d_price):+1.0f}'[0]
             time = '[날짜: ' + str(self.time)[:10] + ']'
-            print(time, f' [주문(today): {order:.0f}] [가격변동: {sign}] [일일 수익률: {(profit * 100):.1f}%] [수익: {income:.0f} 원]')
+            print(time, f' [주문(today): {order:.0f}] [가격변동: {sign}] [일일 수익률: {(profit * 100):.1f}%] [예상 수익: {income:.0f} 원]', end='')
+            print(f' [실 수익: {income_:.0f}]')
         
-        self.idx += 1
         new_state = np.array(self.data.iloc[self.idx-self.sequence_length:self.idx]).reshape(-1)
-        self.time = self.data.index[self.idx]
+        self.idx += 1
 
         if self.time == self.data.index[-1]:
             done = True
@@ -119,5 +126,10 @@ class Environment:
             print(f'[{self.episode+1}/{self.n_episode}] 종목: {self.name}{pad}', end='')
             print(f'코드: {self.code}  평균 일일 수익률: {average_profit:+.2f}%')
             return new_state, reward, done, self.profit_list
+            
+        
+        self.time = self.data.index[self.idx]
         
         return new_state, reward, done, None
+
+    
