@@ -10,17 +10,18 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 ##### params for Environment ###
 
-n_episode = 200
+n_episode = 20
 sequence_length = 7
 amp = 10
+period = 7
 clip = int(np.log10(amp))
 end = datetime.today()
-start = datetime(2020,12,1)
+start = end - timedelta(days = period)
 
 ### params for Agent
-path = './model/KOSPI_'
-render = False
-state_dim = sequence_length * 5
+path = './model/total'
+render = True
+state_dim = sequence_length * 10
 ### parms for Network
 lr = 1e-4
 epsilon = 0.2
@@ -42,10 +43,12 @@ def main_test():
     env = Environment(n_episode = n_episode,
                       sequence_length = sequence_length,
                       amp = amp,
+                      start = start,
+                      end = end
                       )
 
     stock_name_list = []
-    
+    score_list = []
     for e in range(n_episode):
         state = env.reset(e)
         done = False
@@ -59,8 +62,9 @@ def main_test():
         score_list.append(np.mean(profit_list))
     #all epi done
     count = list(filter(lambda x: x > 0, score_list))
-    ratio = len(count) / len(origin_ratio_list)
-    print('Main Test## [평균 일일 수익률: {:.1f}, 이익 종목 비율: {:.1f}%]'.format(Average_profit, ratio * 100))
+    ratio = len(count) / len(score_list)
+    average_profit = np.mean(score_list)
+    print('Main Test## [평균 일일 수익률: {:.1f}, 이익 종목 비율: {:.1f}%]'.format(average_profit, ratio * 100))
     plt.scatter(stock_name_list, score_list)
     plt.xticks(rotation = 90)
     plt.ylabel('Profit Ratio [%]')
@@ -81,7 +85,7 @@ def stock_item_test(name = None, code = None):
     while not done:
         order, log_prob = agent.get_action(state)
         order = np.round(order, clip)
-        state_, reward, done, profit_list = env.step(order, True)
+        state_, reward, done, profit_list = env.step(order, render)
         time_list.append(str(env.time)[2:10])
         state = state_
     #epi done
@@ -115,7 +119,7 @@ def find_items():
         while not done:
             order, log_prob = agent.get_action(state)
             order = np.round(order, clip)
-            state_, reward, done, total_profit, pr = env.step(order, True)
+            state_, reward, done, total_profit, pr = env.step(order, render)
             state = state_
             pr_list.append(pr)
         #one items done.
@@ -139,6 +143,7 @@ def find_items():
     plt.show()
 
 if __name__ == "__main__":
-    #main_test()
+    main_test()
     #find_items()
-    stock_item_test()
+    #stock_item_test()
+    #stock_item_test('삼성전자', '005930.KS')

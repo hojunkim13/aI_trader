@@ -26,14 +26,12 @@ class Environment:
             choice_stock = self.choice_stock % 200
             self.choice_stock += 1
             (code, name) = self.pool.loc[choice_stock]
-        start = datetime(2010,1,1) + timedelta(days= -60)
+        start = datetime(2010,1,1) + timedelta(days= -80)
         end = self.check_time(datetime.today())
         
         self.total_data = pdr.get_data_yahoo(code, start, end).drop(columns = 'Adj Close')
-        self.total_data = self._add_indicator(self.total_data)
 
-        target_period_data = pdr.get_data_yahoo(code, self.start + timedelta(days=-60), self.end).drop(columns = 'Adj Close')
-        target_period_data = self._add_indicator(target_period_data)
+        target_period_data = pdr.get_data_yahoo(code, self.start + timedelta(days=-80), self.end).drop(columns = 'Adj Close')
         return target_period_data, name, code
 
     def normalize(self, df):
@@ -43,8 +41,8 @@ class Environment:
         for col in df.columns:
             g_max = self.total_data[col].max()
             g_min = self.total_data[col].min()
-            l_min = df[col].min()
             l_max = df[col].max()
+            l_min = df[col].min()
             assert g_max >= l_max, (self.name+', normalize error occured,  ' + col)
             assert g_min <= l_min, (self.name+', normalize error occured,  ' + col)
             df[col] = (df[col] - g_min) / (g_max - g_min)
@@ -75,7 +73,8 @@ class Environment:
         self.profit_list = []
         data, self.name, self.code = self.get_data(name, code)
         data = self.normalize(data)
-        period = (self.end - self.start).days + self.sequence_length + 1
+        data = self._add_indicator(data)
+        period = (self.end - self.start).days + self.sequence_length
         self.data = data[-period:]
         self.idx = self.sequence_length
         self.time = self.data.index[self.idx]
@@ -89,6 +88,7 @@ class Environment:
         sell = self.data['Close'][self.idx] * self.unnorm_c[0] + self.unnorm_c[1]
         
         done = False
+        order = np.clip(order, -2,2)
         order = order * self.amp
         #계산
         #in case of order < 0, (pred means sell & price will go down)
@@ -102,12 +102,10 @@ class Environment:
 
         self.profit_list.append(profit*100)
         #todo sign >> clip (price clipping)
-        if np.sign(d_price) < 0:
-            reward = np.sign(d_price) * (order) / self.amp 
-            reward = np.clip(reward, 0, 1)
-        else:
-            reward = np.sign(d_price) * (order) / self.amp * 0.5
-            reward = np.clip(reward, 0, 1)
+        
+        reward = (d_price) * (order) / 1000
+        reward = np.clip(reward, -1, 1)
+
 
         if render:
             sign = f'{np.sign(d_price):+1.0f}'[0]

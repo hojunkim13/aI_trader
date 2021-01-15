@@ -88,7 +88,7 @@ class Agent:
         return td_target, advantage
 
     def save(self, path):
-        torch.save(self.net.state_dict(), path + '_ppo.pt')
+        torch.save(self.net.state_dict(), path + '.pt')
 
     def load(self, path):
-        self.net.load_state_dict(torch.load(path + '_ppo.pt'))
+        self.net.load_state_dict(torch.load(path + '.pt'))
