@@ -120,6 +120,7 @@ def find_items():
             order, log_prob = agent.get_action(state)
             order = np.round(order, clip)
             state_, reward, done, total_profit, pr = env.step(order, render)
+            print(reward)
             state = state_
             pr_list.append(pr)
         #one items done.

@@ -84,12 +84,12 @@ class Environment:
 
     def step(self, order, render = False):
         #H L O C V
+        reward = -0.1
         buy = self.data['Open'][self.idx] * self.unnorm_o[0] + self.unnorm_o[1]
         sell = self.data['Close'][self.idx] * self.unnorm_c[0] + self.unnorm_c[1]
         
         done = False
-        order = np.clip(order, -2,2)
-        order = order * self.amp
+        order = np.clip(order, -2,2) * self.amp
         #계산
         #in case of order < 0, (pred means sell & price will go down)
         #if price difference is plus, our income will be minus,
@@ -99,11 +99,11 @@ class Environment:
         income = d_price * order
         income_ = d_price * np.clip(order, 0, None)
         profit = d_price / buy * np.sign(order)
-
-        self.profit_list.append(profit*100)
-        #todo sign >> clip (price clipping)
         
-        reward = (d_price) * (order) / 1000
+        self.profit_list.append(profit*100)
+        
+        
+        reward = (d_price / buy) * order
         reward = np.clip(reward, -1, 1)
 
 

@@ -9,7 +9,7 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 
 ##### params for Environment ###
-n_episode = 500
+n_episode = 1000
 sequence_length = 7
 amp = 10
 clip = int(np.log10(amp))
@@ -25,9 +25,9 @@ lr = 1e-5
 epsilon = 0.2
 gamma = 0.5
 lmbda = 0.5
-buffer_size = 1000
+buffer_size = 5000
 batch_size = 512
-k_epochs = 10
+k_epochs = 30
 
 
 
@@ -58,6 +58,7 @@ if __name__ == "__main__":
             order, log_prob = agent.get_action(state)
             order = np.round(order, clip)
             state_, reward, done, profit_list = env.step(order, render)
+            
             score += reward
             orders.append(order)
             agent.store((state, order, log_prob, reward, state_, done))
