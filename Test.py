@@ -13,7 +13,7 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 n_episode = 20
 sequence_length = 7
 amp = 10
-period = 7
+period = 1
 clip = int(np.log10(amp))
 end = datetime.today()
 start = end - timedelta(days = period)
@@ -23,13 +23,13 @@ path = './model/total'
 render = True
 state_dim = sequence_length * 10
 ### parms for Network
-lr = 1e-4
+lr = 1e-5
 epsilon = 0.2
-gamma = 0.80
-lmbda = 0.80
-buffer_size = 1000
+gamma = 0.5
+lmbda = 0.5
+buffer_size = 5000
 batch_size = 512
-k_epochs = 10
+k_epochs = 30
 
 
 agent = Agent(state_dim, lr = lr, epsilon = epsilon, gamma = gamma,
@@ -120,7 +120,7 @@ def find_items():
             order, log_prob = agent.get_action(state)
             order = np.round(order, clip)
             state_, reward, done, total_profit, pr = env.step(order, render)
-            print(reward)
+            
             state = state_
             pr_list.append(pr)
         #one items done.

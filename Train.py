@@ -16,7 +16,7 @@ clip = int(np.log10(amp))
 filter_item = True
 ### params for Agent
 path = './model/total'
-load = False
+load = True
 render = False
 save_cycle = 5
 state_dim = sequence_length * 10
