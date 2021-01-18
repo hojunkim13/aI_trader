@@ -12,8 +12,6 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 n_episode = 1000
 sequence_length = 7
 amp = 10
-clip = int(np.log10(amp))
-filter_item = True
 ### params for Agent
 path = './model/total'
 load = True
@@ -56,9 +54,7 @@ if __name__ == "__main__":
         orders = []
         while not done:
             order, log_prob = agent.get_action(state)
-            order = np.round(order, clip)
             state_, reward, done, profit_list = env.step(order, render)
-            
             score += reward
             orders.append(order)
             agent.store((state, order, log_prob, reward, state_, done))
@@ -71,11 +67,7 @@ if __name__ == "__main__":
         if (e+1) % save_cycle ==0:
             agent.save(path)
     #all epi done
-    ''' n = pd.DataFrame(name_list, columns = ['Name'])
-    c = pd.DataFrame(code_list, columns = ['Code'])
-    value_items = pd.concat([n, c], axis = 1)
-    if filter_item:
-        value_items.to_csv('./data/train_item.csv', sep=',', encoding = 'utf-8-sig', index = False)'''
+
     count = len(list(filter(lambda x: x > 0, score_list)))
     total_average = np.mean(score_list)
     print('[총 평균 수익률: {:.2f}%, 이익 종목 비율: {:.0f}%]'.format(total_average, count/n_episode * 100))
