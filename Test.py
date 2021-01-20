@@ -9,7 +9,7 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 
 
-switch = 'main_test'
+switch = 'find_item'
 ##### params for Environment ###
 n_episode = 20
 sequence_length = 7
@@ -107,7 +107,7 @@ def find_items():
                       sequence_length = sequence_length,
                       amp = amp,
                       start = start,
-                      end = end
+                      end = end,
                       )
     info_list = []
     avr_score_list = []
