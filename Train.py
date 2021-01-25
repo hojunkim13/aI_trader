@@ -13,7 +13,7 @@ n_episode = 1000
 sequence_length = 7
 amp = 10
 ### params for Agent
-path = './model/total2'
+path = './model/total'
 load = True
 render = False
 save_cycle = 5
